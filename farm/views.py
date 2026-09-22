@@ -110,9 +110,14 @@ class DeletePhoneView(APIView):
 
 def _provider_error_response(error: ProviderAPIError) -> Response:
     status_code = error.status_code or status.HTTP_502_BAD_GATEWAY
-    message = str(error)
-    if status_code >= 500:
+    if error.code == "unsupported_provider":
+        message = "Unsupported provider."
+    elif error.code == "provider_not_configured":
+        message = "Provider is not configured."
+    elif status_code >= 500:
         message = "Provider request failed."
+    else:
+        message = "Provider request rejected."
 
     return Response(
         {
