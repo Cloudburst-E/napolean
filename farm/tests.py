@@ -62,3 +62,23 @@ class FarmApiTests(APITestCase):
         response = self.client.get("/api/providers/devicefarm/phones/abc/script", {"run_id": "run_1"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()["data"]["run_id"], "run_1")
+
+    @patch("farm.views.get_provider_client", return_value=_StubProviderClient())
+    def test_shell_rejects_input_tap(self, _):
+        response = self.client.post(
+            "/api/providers/devicefarm/phones/abc/shell",
+            {"cmd": "input tap 100 200"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("h_* helpers", str(response.json()))
+
+    @patch("farm.views.get_provider_client", return_value=_StubProviderClient())
+    def test_script_requires_humanize_source(self, _):
+        response = self.client.post(
+            "/api/providers/devicefarm/phones/abc/script",
+            {"script": "h_tap 100 200", "stop_when_done": True},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("source /data/local/tmp/humanize.sh", str(response.json()))

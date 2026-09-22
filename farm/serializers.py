@@ -1,6 +1,12 @@
 """DRF serializers for farm API requests."""
 
+import re
+
 from rest_framework import serializers
+
+
+FORBIDDEN_INPUT_COMMAND_PATTERN = re.compile(r"\binput\s+(tap|swipe|touchscreen)\b", flags=re.IGNORECASE)
+HUMANIZE_SOURCE_PATTERN = re.compile(r"(^|\n)\s*(\.|source)\s+/data/local/tmp/humanize\.sh(\s|$)")
 
 
 class ListPhonesQuerySerializer(serializers.Serializer):
@@ -29,10 +35,28 @@ class PreparePhoneSerializer(serializers.Serializer):
 class ShellSerializer(serializers.Serializer):
     cmd = serializers.CharField(max_length=8192)
 
+    def validate_cmd(self, value: str) -> str:
+        if FORBIDDEN_INPUT_COMMAND_PATTERN.search(value):
+            raise serializers.ValidationError(
+                "Use h_* helpers from /data/local/tmp/humanize.sh instead of input tap/swipe/touchscreen."
+            )
+        return value
+
 
 class ScriptSerializer(serializers.Serializer):
     script = serializers.CharField(max_length=65536)
     stop_when_done = serializers.BooleanField(required=False, default=True)
+
+    def validate_script(self, value: str) -> str:
+        if FORBIDDEN_INPUT_COMMAND_PATTERN.search(value):
+            raise serializers.ValidationError(
+                "Use h_* helpers from /data/local/tmp/humanize.sh instead of input tap/swipe/touchscreen."
+            )
+        if not HUMANIZE_SOURCE_PATTERN.search(value):
+            raise serializers.ValidationError(
+                "Scripts must source /data/local/tmp/humanize.sh once per run."
+            )
+        return value
 
 
 class ScriptStatusQuerySerializer(serializers.Serializer):
