@@ -61,14 +61,6 @@ class PhoneActionView(APIView):
                 serializer = ShellSerializer(data=request.data)
                 serializer.is_valid(raise_exception=True)
                 result = provider_client.run_shell(phone_id, cmd=serializer.validated_data["cmd"])
-            elif action == "script":
-                serializer = ScriptSerializer(data=request.data)
-                serializer.is_valid(raise_exception=True)
-                result = provider_client.run_script(
-                    phone_id,
-                    script=serializer.validated_data["script"],
-                    stop_when_done=serializer.validated_data.get("stop_when_done", True),
-                )
             else:
                 raise ProviderAPIError(
                     f"Unsupported action '{action}'",
@@ -80,7 +72,21 @@ class PhoneActionView(APIView):
         return Response({"data": result})
 
 
-class ScriptStatusView(APIView):
+class ScriptView(APIView):
+    def post(self, request, provider_name: str, phone_id: str):
+        try:
+            provider_client = get_provider_client(provider_name)
+            serializer = ScriptSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            result = provider_client.run_script(
+                phone_id,
+                script=serializer.validated_data["script"],
+                stop_when_done=serializer.validated_data.get("stop_when_done", True),
+            )
+        except ProviderAPIError as exc:
+            return _provider_error_response(exc)
+        return Response({"data": result})
+
     def get(self, request, provider_name: str, phone_id: str):
         try:
             provider_client = get_provider_client(provider_name)
