@@ -1,15 +1,21 @@
 # napolean
 
-Basic Django API service for managing a mobile phone farm with pluggable
-hardware-as-a-service providers.
+A basic Django service for managing a mobile phone farm through a unified API and pluggable provider clients (starting with DeviceFarm).
 
-## Stack
+## What this project does
 
-- Django 5.2.13
-- Django REST Framework 3.15.2
-- requests 2.32.3
+- Exposes REST endpoints for phone lifecycle and automation actions
+- Uses a provider abstraction so multiple hardware platforms can be supported
+- Includes a DeviceFarm client implementation
 
-## Setup
+## Tech stack
+
+- Python
+- Django
+- Django REST Framework
+- requests
+
+## Quick start
 
 ```bash
 python -m pip install -r requirements.txt
@@ -19,28 +25,34 @@ python manage.py runserver
 
 ## Configuration
 
-Set provider credentials via environment variables:
+Set provider credentials as environment variables:
 
 - `DEVICEFARM_API_KEY`: API key for `https://devicefarm.io/api/v1`
 
-## API surface
+## API overview
 
 Base path: `/api/`
 
-- `GET /api/providers/` — list supported providers
-- `GET /api/providers/{provider}/phones` — list phones (`limit` query supported)
-- `POST /api/providers/{provider}/phones` — create phone
-- `POST /api/providers/{provider}/phones/{phone_id}/start` — start phone
-- `POST /api/providers/{provider}/phones/{phone_id}/stop` — stop phone
-- `POST /api/providers/{provider}/phones/{phone_id}/prepare` — install automation library
-- `POST /api/providers/{provider}/phones/{phone_id}/shell` — run shell command
-- `POST /api/providers/{provider}/phones/{phone_id}/script` — run detached script
-- `GET /api/providers/{provider}/phones/{phone_id}/script?run_id=...` — poll run status
-- `DELETE /api/providers/{provider}/phones/{phone_id}` — delete phone permanently
+- `GET /api/providers/`
+- `GET /api/providers/{provider}/phones`
+- `POST /api/providers/{provider}/phones`
+- `POST /api/providers/{provider}/phones/{phone_id}/start`
+- `POST /api/providers/{provider}/phones/{phone_id}/stop`
+- `POST /api/providers/{provider}/phones/{phone_id}/prepare`
+- `POST /api/providers/{provider}/phones/{phone_id}/shell`
+- `POST /api/providers/{provider}/phones/{phone_id}/script`
+- `GET /api/providers/{provider}/phones/{phone_id}/script?run_id=...`
+- `DELETE /api/providers/{provider}/phones/{phone_id}`
 
-## DeviceFarm notes encoded in the client/API layer
+## Architecture diagram
 
-- Uses bearer token authentication with your DeviceFarm API key
-- Supports the full documented endpoint set
-- Preserves provider error envelope (`data` / `error`) for API consumers
-- Includes `stop_when_done` support for detached script runs
+```mermaid
+flowchart LR
+    Client[API Consumer\nCLI / Web / Worker] --> DRF[Django REST API\n/farm/views.py]
+    DRF --> Registry[Provider Registry\n/farm/providers/registry.py]
+    Registry -->|devicefarm| DFClient[DeviceFarm Client\n/farm/providers/devicefarm.py]
+    DFClient --> DFAPI[DeviceFarm HTTP API\nhttps://devicefarm.io/api/v1]
+
+    DRF --> Serializers[Request Validation\n/farm/serializers.py]
+    DFClient --> Base[Provider ABC\n/farm/providers/base.py]
+```
